@@ -22,12 +22,12 @@ access:
   vu: always
 data_independent_timing: false
 operation(): |
-  V[vd][0] = perform_arith(
-    V[vd][0],
-    X[rs1],
-    X[rs1],
-    $bits(X[rs1]),
-    $encoding
+  V[vd][j] = perform_arith(
+      V[vd][0],
+      X[rs1],
+      V[vd][j],       # Original value
+      $bits(X[rs1]),  # Always unmasked
+      {opcode: 0x1A, rs1: rs1}  # vmv.s.x encoding
   );
 
 # SPDX-SnippetBegin

@@ -26,6 +26,16 @@ access:
   vu: always
 data_independent_timing: false
 operation(): |
+  U64 offset = X[rs1];
+  for (U32 j = 0; j < VLMAX; j++) {
+    V[vd][j] = perform_arith(
+        0,  # Dummy vs1
+        (j >= offset) ? V[vs2][j - offset] : 0,
+        V[vd][j],  # Original value
+        (v0.mask[j] && (j < vl)) ? 1 : 0,
+        {opcode: 0x18, rs1: rs1, mask: $vm}  # vslideup.vx encoding
+    );
+  }
 
 # SPDX-SnippetBegin
 # SPDX-FileCopyrightText: 2017-2025 Contributors to the RISCV Sail Model <https://github.com/riscv/sail-riscv/blob/master/LICENCE>

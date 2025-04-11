@@ -23,11 +23,11 @@ access:
 data_independent_timing: false
 operation(): |
   X[rd] = perform_arith(
-    X[rd],
-    V[vs2][0],
-    V[vs2][0],
-    $bits(V[vs2][0]),
-    $encoding
+      0,  # Dummy vs1
+      V[vs2][0],  # First element
+      X[rd],  # Original scalar value
+      $bits(V[vs2][0]),
+      {opcode: 0x1B, vs2: vs2}  # vmv.x.s encoding
   );
 
 # SPDX-SnippetBegin

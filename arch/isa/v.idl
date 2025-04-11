@@ -1,3 +1,5 @@
+%version: 1.0
+
 # Enumeration for LMUL (Vector Register Group Multiplier)
 enum LMUL {
     M1 1     # Single vector register group (Default)
@@ -89,6 +91,29 @@ function perform_operation {
         }
     }
 }
+
+# Slideup operation for both vslideup.vx and vslideup.vi
+function perform_slideup {
+    returns U32
+    arguments
+        U32 offset,
+        list<U32> vs2,
+        U32 index
+    description {
+        Slides elements of vs2 up by 'offset' positions.
+        Returns 0 for elements that shift in from below.
+        Used by both vslideup.vx (offset from scalar register) and vslideup.vi (offset immediate).
+    }
+    body {
+        if (index < offset) {
+            return 0;  # Inserted zero for positions below offset
+        } else {
+            return vs2[index - offset];  # Shifted element
+        }
+    }
+}
+
+
 
 # Mask Policy Handling
 function handle_mask_policy {
@@ -205,8 +230,69 @@ function sew_selection {
     }
 }
 
+function vslideup_operation {
+    returns U32
+    arguments
+        U32 vs2_element,
+        U32 vd_old_element,
+        U64 offset,
+        U32 index,
+        Bits<1> mask_bit,
+        VectorConfig cfg
+    description {
+        Handles vector slide-up operations with proper mask/tail policies.
+    }
+    body {
+        U32 first_active = max(cfg.vstart, offset);
 
+        if (index >= cfg.vl) {
+            return handle_tail_elements(vd_old_element);
+        }
+        else if (mask_bit == 0) {
+            return handle_mask_policy(vd_old_element, cfg);
+        }
+        else if (index < first_active) {
+            return vd_old_element;
+        }
+        else {
+            return vs2_element;
+        }
+    }
+}
 
+function vmv_s_x_operation {
+    returns U32
+    arguments
+        U32 x_data,
+        U32 vd_old_element,
+        U32 index,
+        VectorConfig cfg
+    description {
+        Moves scalar to vector element with sign-extension when SEW > XLEN.
+    }
+    body {
+        if (index >= cfg.vl) {
+            return handle_tail_elements(vd_old_element);
+        }
+        return (cfg.Sew > 32) ? sign_extend(x_data) : x_data;
+    }
+}
+
+function vmv_x_s_operation {
+    returns U32
+    arguments
+        U32 vs2_element,
+        U32 x_old,
+        VectorConfig cfg
+    description {
+        Moves vector element to scalar register with truncation when SEW > XLEN.
+    }
+    body {
+        return (cfg.Sew > 32) ? (vs2_element & 0xFFFFFFFF) : vs2_element;
+    }
+}
+
+# === UPDATED perform_arith ===
 function perform_arith {
     returns U32
     arguments
@@ -216,13 +302,38 @@ function perform_arith {
         Bits<1> vs0_mask_bit,
         U32 encoding
     description {
-        Performs vector arithmetic based on input vector registers and mask.
-        Accepts three data vectors elements (vs1, vs2, vs3) and a mask vector (vs0).
-        The operation behavior is influenced by the mask instruction bit (bit 25).
-        Returns the result of element-wise vector processing as a 32-bit unsigned value.
-
+        Extended to handle slideup and scalar move operations.
     }
     body {
-        return sew_selection(vs1_data, vs2_data, vs3_data, vs0_mask_bit,encoding);
+        # Detect new opcodes
+        if (encoding[31:26] == 0x18) {  # vslideup
+            return vslideup_operation(
+                vs2_data,
+                vs3_data,
+                (encoding[25] ? X[encoding[19:15]] : encoding[19:15]),  # offset
+                $element_index,
+                vs0_mask_bit,
+                $get_config()
+            );
+        }
+        else if (encoding[31:26] == 0x1A) {  # vmv.s.x
+            return vmv_s_x_operation(
+                X[encoding[19:15]],  # rs1
+                vs3_data,
+                $element_index,
+                $get_config()
+            );
+        }
+        else if (encoding[31:26] == 0x1B) {  # vmv.x.s
+            return vmv_x_s_operation(
+                vs2_data,
+                vs3_data,
+                $get_config()
+            );
+        }
+        else {
+            # Original arithmetic logic
+            return sew_selection(vs1_data, vs2_data, vs3_data, vs0_mask_bit, encoding);
+        }
     }
 }
