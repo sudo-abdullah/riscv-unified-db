@@ -22,6 +22,13 @@ access:
   vu: always
 data_independent_timing: false
 operation(): |
+  V[vd][0] = perform_arith(
+    V[vd][0],
+    X[rs1],
+    X[rs1],
+    $bits(X[rs1]),
+    $encoding
+  );
 
 # SPDX-SnippetBegin
 # SPDX-FileCopyrightText: 2017-2025 Contributors to the RISCV Sail Model <https://github.com/riscv/sail-riscv/blob/master/LICENCE>
