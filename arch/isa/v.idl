@@ -292,6 +292,52 @@ function vslidedown_operation {
         }
     }
 }
+function vslide1_operation {
+    returns U32
+    arguments
+        U32 vs2_element,
+        U32 vd_old_element,
+        U32 scalar_value,    # From x/f register
+        U32 index,
+        Bits<1> mask_bit,
+        VectorConfig cfg,
+        Bits<2> mode         # 0:slide1up, 1:slide1down, 2:fslide1up, 3:fslide1down
+    description {
+        Handles all slide1 variants with proper scalar insertion and policies.
+        Mode: 0=vslide1up, 1=vslide1down, 2=vfslide1up, 3=vfslide1down
+    }
+    body {
+        # Common policy checks
+        if (index >= cfg.vl) {
+            return handle_tail_elements(vd_old_element);
+        }
+        else if (index < cfg.vstart) {
+            return vd_old_element;
+        }
+        else if (mask_bit == 0) {
+            return handle_mask_policy(vd_old_element, cfg);
+        }
+
+        # Mode-specific behavior
+        if (mode[0] == 0) {  # slide1up variants
+            if (index == max(cfg.vstart, 0)) {
+                return (cfg.Sew > 32) ? sign_extend(scalar_value) : scalar_value;
+            }
+            else if (index > 0) {
+                return vs2_element;  # vs2[index-1]
+            }
+        }
+        else {  # slide1down variants
+            if (index == (cfg.vl - 1)) {
+                return (cfg.Sew > 32) ? sign_extend(scalar_value) : scalar_value;
+            }
+            else {
+                return vs2_element;  # vs2[index+1]
+            }
+        }
+        return vd_old_element;  # Fallthrough
+    }
+}
 
 function vmv_s_x_operation {
     returns U32
@@ -339,7 +385,29 @@ function perform_arith {
     }
     body {
 
-        if (encoding[31:26] == 0x19) {  # vslidedown
+        if (encoding[31:26] == 0x1C) {  # vslide1up/vfslide1up
+            return vslide1_operation(
+                vs2_data,
+                vs3_data,
+                X[encoding[19:15]],  # x/f register
+                $element_index,
+                vs0_mask_bit,
+                $get_config(),
+                {encoding[25], 0}    # mode[1:0]
+            );
+        }
+        else if (encoding[31:26] == 0x1D) {  # vslide1down/vfslide1down
+            return vslide1_operation(
+                vs2_data,
+                vs3_data,
+                X[encoding[19:15]],  # x/f register
+                $element_index,
+                vs0_mask_bit,
+                $get_config(),
+                {encoding[25], 1}   # mode[1:0]
+            );
+        }
+        else if (encoding[31:26] == 0x19) {  # vslidedown
             return vslidedown_operation(
                 vs2_data,
                 vs3_data,

@@ -26,6 +26,15 @@ access:
   vu: always
 data_independent_timing: false
 operation(): |
+  for (U32 j = 0; j < VLMAX; j++) {
+    V[vd][j] = perform_arith(
+        0,  # Dummy vs1
+        (j < (VLMAX-1)) ? V[vs2][j+1] : 0,
+        V[vd][j],  # Original value
+        (v0.mask[j] && (j < vl)) ? 1 : 0,
+        {opcode: 0x1D, rs1: rs1, mask: $vm}  # vslide1down.vx encoding
+    );
+  }
 
 # SPDX-SnippetBegin
 # SPDX-FileCopyrightText: 2017-2025 Contributors to the RISCV Sail Model <https://github.com/riscv/sail-riscv/blob/master/LICENCE>
