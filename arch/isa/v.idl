@@ -260,6 +260,39 @@ function vslideup_operation {
     }
 }
 
+function vslidedown_operation {
+    returns U32
+    arguments
+        U32 vs2_element,
+        U32 vd_old_element,
+        U64 offset,
+        U32 index,
+        Bits<1> mask_bit,
+        VectorConfig cfg
+    description {
+        Handles vector slide-down operations with proper mask/tail policies.
+        Returns 0 for source elements when i+offset >= VLMAX
+    }
+    body {
+        # Source element selection
+        U32 src_element = ((index + offset) < cfg.vlmax) ? vs2_element : 0;
+
+        # Destination policy handling
+        if (index >= cfg.vl) {
+            return handle_tail_elements(vd_old_element);
+        }
+        else if (index < cfg.vstart) {
+            return vd_old_element;
+        }
+        else if (mask_bit == 0) {
+            return handle_mask_policy(vd_old_element, cfg);
+        }
+        else {
+            return src_element;
+        }
+    }
+}
+
 function vmv_s_x_operation {
     returns U32
     arguments
@@ -302,11 +335,21 @@ function perform_arith {
         Bits<1> vs0_mask_bit,
         U32 encoding
     description {
-        Extended to handle slideup and scalar move operations.
+        Capable to handle slideup/down and scalar move operations.
     }
     body {
-        # Detect new opcodes
-        if (encoding[31:26] == 0x18) {  # vslideup
+
+        if (encoding[31:26] == 0x19) {  # vslidedown
+            return vslidedown_operation(
+                vs2_data,
+                vs3_data,
+                (encoding[25] ? X[encoding[19:15]] : encoding[19:15]),  # offset
+                $element_index,
+                vs0_mask_bit,
+                $get_config()
+            );
+        }
+        else if (encoding[31:26] == 0x18) {  # vslideup
             return vslideup_operation(
                 vs2_data,
                 vs3_data,
