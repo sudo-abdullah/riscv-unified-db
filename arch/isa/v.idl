@@ -339,6 +339,50 @@ function vslide1_operation {
     }
 }
 
+function vrgather_operation {
+    returns U32
+    arguments
+        U32 vs2_element,     # Source vector element
+        U32 index_value,     # Index value (from vs1/xreg/imm)
+        U32 vd_old_element,  # Original destination value
+        U32 index,           # Current element index
+        Bits<1> mask_bit,
+        VectorConfig cfg,
+        Bits<2> mode         # 0:vv, 1:vx, 2:vi, 3:ei16
+    description {
+        Handles all vrgather variants with proper index bounds checking.
+        Mode: 0=vv, 1=vx, 2=vi, 3=ei16
+    }
+    body {
+        # Common policy checks
+        if (index >= cfg.vl) {
+            return handle_tail_elements(vd_old_element);
+        }
+        else if (index < cfg.vstart) {
+            return vd_old_element;
+        }
+        else if (mask_bit == 0) {
+            return handle_mask_policy(vd_old_element, cfg);
+        }
+
+        # Index bounds check
+        if (index_value >= cfg.vlmax) {
+            return 0;
+        }
+
+        # For vx/vi modes, verify we're accessing the requested index
+        if (mode[1] == 1) {  # vx/vi modes
+            if (index != 0 && index_value != index) {
+                return vd_old_element;
+            }
+            return vs2_element;  # vs2[index_value] (pre-looked up)
+        }
+        else {  # vv/ei16 modes
+            return vs2_element;  # vs2[index_value] (pre-looked up)
+        }
+    }
+}
+
 function vmv_s_x_operation {
     returns U32
     arguments
@@ -381,11 +425,39 @@ function perform_arith {
         Bits<1> vs0_mask_bit,
         U32 encoding
     description {
-        Capable to handle slideup/down and scalar move operations.
+        Capable to handle Vector Permutation Istructions.
     }
     body {
 
-        if (encoding[31:26] == 0x1C) {  # vslide1up/vfslide1up
+        if (encoding[31:26] == 0x20) {  # vrgather
+            Bits<2> mode = {encoding[25], encoding[20]};  # Determine variant
+
+            U32 index_val;
+            if (mode == 0) {  # vv
+                index_val = vs1_data;
+            }
+            else if (mode == 1) {  # vx
+                index_val = X[encoding[19:15]];
+            }
+            else if (mode == 2) {  # vi
+                index_val = encoding[19:15];
+            }
+            else {  # ei16
+                index_val = vs1_data & 0xFFFF;  # 16-bit indices
+            }
+
+            return vrgather_operation(
+                vs2_data,    # Source element (pre-indexed)
+                index_val,   # Actual index value
+                vs3_data,   # Original destination
+                $element_index,
+                vs0_mask_bit,
+                $get_config(),
+                mode
+            );
+        }
+
+        else if (encoding[31:26] == 0x1C) {  # vslide1up/vfslide1up
             return vslide1_operation(
                 vs2_data,
                 vs3_data,
