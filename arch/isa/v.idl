@@ -383,6 +383,47 @@ function vrgather_operation {
     }
 }
 
+function vcompress_operation {
+    returns U32
+    arguments
+        U32 vs2_element,     # Source vector element
+        U32 vd_old_element,  # Original destination value
+        U32 index,           # Current element index
+        Bits<1> mask_bit,    # From vs1 mask register
+        VectorConfig cfg,
+        ref U32 write_ptr    # Tracks compressed position
+    description {
+        Handles vcompress operation with proper packing and policies.
+        Returns tuple of (new_value, write_ptr_update).
+    }
+    body {
+        # Illegal if vstart != 0 (per spec)
+        if (cfg.vstart != 0) {
+            $raise_illegal_instruction();
+        }
+
+        # Tail elements
+        if (index >= cfg.vl) {
+            return handle_tail_elements(vd_old_element);
+        }
+
+        # Active compression
+        if (mask_bit == 1) {
+            U32 result = vs2_element;
+            write_ptr = write_ptr + 1;  # Increment write pointer
+            return result;
+        }
+        else if (index < write_ptr) {
+            # Keep already compressed elements
+            return vd_old_element;
+        }
+        else {
+            # Fill gaps with tail policy
+            return handle_tail_elements(vd_old_element);
+        }
+    }
+}
+
 function vmv_s_x_operation {
     returns U32
     arguments
@@ -429,7 +470,27 @@ function perform_arith {
     }
     body {
 
-        if (encoding[31:26] == 0x20) {  # vrgather
+        if (encoding[31:26] == 0x22 && encoding[25] == 1) {  # vcompress.vm
+            static U32 write_ptr = 0;  # Persistent across elements
+
+            U32 result = vcompress_operation(
+                vs2_data,
+                vs3_data,
+                $element_index,
+                vs1_data,  # Mask bit from vs1
+                $get_config(),
+                write_ptr
+            );
+
+            # Reset write pointer after last element
+            if ($element_index == (VLMAX - 1)) {
+                write_ptr = 0;
+            }
+
+            return result;
+        }
+
+        else if (encoding[31:26] == 0x20) {  # vrgather
             Bits<2> mode = {encoding[25], encoding[20]};  # Determine variant
 
             U32 index_val;

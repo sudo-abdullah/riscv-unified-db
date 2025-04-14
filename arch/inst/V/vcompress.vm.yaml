@@ -24,6 +24,29 @@ access:
   vu: always
 data_independent_timing: false
 operation(): |
+  U32 write_ptr = 0;
+
+  if ($get_config().vstart != 0) {
+      $raise_illegal_instruction();
+  }
+
+  for (U32 j = 0; j < VLMAX; j++) {
+    # Get mask bit from vs1 (must be unmasked instruction)
+    Bits<1> mask_bit = V[vs1][j] & 0x1;
+
+    V[vd][j] = perform_arith(
+        mask_bit,            # vs1 mask value
+        V[vs2][j],           # Source element
+        V[vd][j],            # Original value
+        1,                   # Unmasked (vm=1)
+        {opcode: 0x22, vm: 1}  # vcompress.vm encoding
+    );
+
+    # Update write pointer for next element
+    if (mask_bit && j < $get_config().vl) {
+        write_ptr++;
+    }
+  }
 
 # SPDX-SnippetBegin
 # SPDX-FileCopyrightText: 2017-2025 Contributors to the RISCV Sail Model <https://github.com/riscv/sail-riscv/blob/master/LICENCE>
