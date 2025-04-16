@@ -3,9 +3,11 @@
 $schema: "inst_schema.json#"
 kind: instruction
 name: aes64ks2
-long_name: No synopsis available.
+long_name:  This instruction implements part of the KeySchedule operation for the AES Block cipher
 description: |
-  No description available.
+  This instruction implements the additional XOR'ing of key words as part of the AES block cipher
+  Key Schedule. This instruction must always be implemented such that its execution latency does
+  not depend on the data being operated on.
 definedBy:
   anyOf: [Zk, Zkn, Zknd, Zkne]
 base: 64

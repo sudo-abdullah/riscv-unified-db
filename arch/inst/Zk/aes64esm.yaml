@@ -3,9 +3,12 @@
 $schema: "inst_schema.json#"
 kind: instruction
 name: aes64esm
-long_name: No synopsis available.
+long_name:  AES middle round encryption instruction for RV64
 description: |
-  No description available.
+  Uses the two 64-bit source registers to represent the entire AES state, and produces half of the next
+  round output, applying the ShiftRows, SubBytes and MixColumns steps. This instruction must
+  always be implemented such that its execution latency does not depend on the data being operated
+  on.
 definedBy:
   anyOf: [Zk, Zkn, Zkne]
 base: 64
