@@ -3,9 +3,21 @@
 $schema: "inst_schema.json#"
 kind: instruction
 name: fdiv.s
-long_name: No synopsis available.
+long_name: Single-precision floating-point division
 description: |
-  No description available.
+  `fdiv.s` performs the single-precision floating-point division of `rs1` by `rs2`.
+  _fmt field  It is set to S (00) for all instructions in the F extension.
+  The 2-bit floating-point format field `fmt` is encoded as shown in Table.
+  
+  .Format field endcoding.
+  [%autowidth,float="center",align="center",cols="^,<",options="header",]
+  |===
+  |_fmt field |Mnemonic |Meaning
+  |00 |S|32-bit single-precision
+  |01 |D|64-bit double-precision
+  |10 |H|16-bit half-precision
+  |11 |Q|128-bit quad-precision 
+  |===
 definedBy: F
 assembly: fd, fs1, fs2, rm
 encoding:

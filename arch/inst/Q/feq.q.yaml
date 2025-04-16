@@ -3,9 +3,14 @@
 $schema: "inst_schema.json#"
 kind: instruction
 name: feq.q
-long_name: No synopsis available.
+long_name: Quad-precision floating-point equal
 description: |
-  No description available.
+  `feq.q` is defined analogously to their single-precision counterparts, 
+  but operates on Quad-precision and produce Quad-precision.
+  Writes 1 to _rd_ if _fs1_ and _fs2_ are equal, and 0 otherwise.
+  If either operand is NaN, the result is 0 (not equal). If either operand is a signaling NaN, 
+  the invalid flag is set.
+  Positive zero is considered equal to negative zero.
 definedBy: Q
 assembly: xd, qs1, qs2
 encoding:

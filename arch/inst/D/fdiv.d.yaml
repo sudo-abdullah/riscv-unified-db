@@ -3,9 +3,23 @@
 $schema: inst_schema.json#
 kind: instruction
 name: fdiv.d
-long_name: No synopsis available.
+long_name: Double-precision floating-point division
 description: |
-  No description available.
+  `fdiv.d` performs the Double-precision floating-point division of `rs1` by `rs2`.
+  This is analogous to its Single-precision counterpart but operate on 
+  Double-precision operands and produce Double-precision results. 
+  _fmt field is set to D (01) for this D extension.
+  The 2-bit floating-point format field `fmt` is encoded as shown in Table.
+  
+  .Format field endcoding.
+  [%autowidth,float="center",align="center",cols="^,<",options="header",]
+  |===
+  |_fmt field |Mnemonic |Meaning
+  |00 |S|32-bit single-precision
+  |01 |D|64-bit double-precision
+  |10 |H|16-bit half-precision
+  |11 |Q|128-bit quad-precision 
+  |===
 definedBy: D
 assembly: xd, xs1, xs2, rm
 encoding:

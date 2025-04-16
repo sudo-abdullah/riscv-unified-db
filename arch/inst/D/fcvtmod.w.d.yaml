@@ -3,9 +3,16 @@
 $schema: inst_schema.json#
 kind: instruction
 name: fcvtmod.w.d
-long_name: No synopsis available.
+long_name: Modular Convert-to-Integer Instruction
 description: |
-  No description available.
+  `fcvtmod.w.d` always rounds towards zero. Bits 31:0 are taken from the rounded,
+  unbounded two's complement result, then sign-extended to `XLEN` bits and written to integer register
+  `rd`. [$-+\infty$] and NaN are converted to zero. Floating-point exception flags are raised 
+  the same as they would be for `fcvt.w.d` with the same input operand.
+  This instruction is only provided if the D extension is implemented. It is encoded like `fcvt.w.d`, but
+  with the `rs2` field set to 8 and the `rm` field set to 1 (RTZ). Other `rm` values are reserved.
+  The assembly syntax requires the RTZ rounding mode to be explicitly specified, i.e.,
+  `fcvtmod.w.d rd, rs1, rtz`.
 definedBy:
   allOf: [D, Zfa]
 assembly: xd, xs1

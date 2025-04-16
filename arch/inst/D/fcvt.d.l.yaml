@@ -3,9 +3,11 @@
 $schema: inst_schema.json#
 kind: instruction
 name: fcvt.d.l
-long_name: No synopsis available.
+long_name: Double-Precision Floating-Point Conversion and Move Instruction
 description: |
-  No description available.
+  The instruction `FCVT.D.L` converts a 64-bit signed integer,
+  in integer register `rs1` into a double-precision floating-point 
+  number in floating-point register `rd`.
 definedBy: D
 assembly: xd, xs1, rm
 encoding:
